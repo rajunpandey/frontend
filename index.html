@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch The Ball</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Catch The Ball</h1>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Footer with Copyright Icon -->
+    <footer>
+        <span id="copyrightIcon" style="cursor: pointer;">&#169;</span>
+    </footer>
+
+    <!-- Popup for Disclaimer -->
+    <div id="popupMessage" class="popup hidden">
+        <div class="popup-content">
+            <span id="closePopup" class="close">&times;</span>
+            <div class="modal-body">
+                <span style="display: block; margin: 10px 0 0 0"><b>Disclaimer:</b></span>
+                <p>
+                    This game is for entertainment purposes only and provided as-is without warranties.
+                    The developer is not responsible for any damages or issues. No personal data is collected—only local high scores are stored.
+                </p>
+                <span style="display: block; margin: 10px 0 0 0; color: #4e4e4e"><b>Credits:</b></span>
+                <p>
+                    Designed & Powered By
+                    <a href="https://www.scieverinc.com/" style="text-decoration: none" target="_blank"><b><span style="color: #4e4e4e">Sciever Inc.</span></b></a>
+                </p>
+                <p>
+                    Developed By
+                    <a href="https://www.instagram.com/rajunpandey/?hl=en" style="text-decoration: none" target="_blank"><span style="color: #4e4e4e; font-weight: 500">Rajun Pandey</span></a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup for Submitting Score -->
+    <div id="submitScorePopup" class="popup hidden">
+        <div class="popup-content">
+            <h2>Submit Your Score</h2>
+            <input id="playerName" type="text" placeholder="Enter your name" />
+            <input id="playerEmail" type="email" placeholder="Enter your email" />
+            <button id="submitScoreBtn">Submit Score</button>
+        </div>
+    </div>
+
+    <!-- Game Over Message -->
+    <div id="gameOverMessage" class="hidden">
+        <p>GAME OVER!</p>
+        <p>Your final score is: <span id="finalScore"></span></p>
+        <p id="highScoreMessage"></p>
+        <button id="restartBtn" onclick="restartGame()">Restart Game</button>
+    </div>
+
+    <!-- Game Script -->
+    <script src="script.js"></script>
+</body>
+</html>
