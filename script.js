@@ -1,4 +1,4 @@
-
+// DOM Elements
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const gameOverMessage = document.getElementById('gameOverMessage');
@@ -7,8 +7,6 @@ const highScoreMessage = document.getElementById('highScoreMessage');
 const restartBtn = document.getElementById('restartBtn');
 
 const popupMessage = document.getElementById('submitScorePopup');
-const playerNameInput = document.getElementById('playerName');
-const playerEmailInput = document.getElementById('playerEmail');
 const submitScoreBtn = document.getElementById('submitScoreBtn');
 
 // Set canvas size
@@ -26,10 +24,10 @@ let ballDx;
 let ballDy;
 let score;
 let isGameRunning = true;
-let highScore = localStorage.getItem('highScore') || 0;
+let highScore = parseInt(localStorage.getItem('highScore')) || 0;
 let username;
 let userId;
-let gameId = "defaultGame"; 
+const gameId = "defaultGame"; // Fixed gameId for simplicity
 
 // Backend URL
 const backendURL = 'http://localhost:8000';
@@ -39,21 +37,19 @@ const userData = JSON.parse(localStorage.getItem('userData'));
 if (userData && userData.username && userData.userId) {
     username = userData.username;
     userId = userData.userId;
-    console.log('User found:', userData);
     initGame();
 } else {
-    console.log('No user data found. Showing username form.'); 
-    showUsernameForm(); // Show form to input username if data not found
+    showUsernameForm();
 }
 
 // Display username form to capture name and user ID
 function showUsernameForm() {
     const usernameForm = document.createElement('div');
     usernameForm.classList.add('form-container');
-    
+
     usernameForm.innerHTML = `
-        <label for="playerName">Enter Username: </label>
-        <input type="text" id="playerName" required>
+        <label for="playerUsername">Enter Username: </label>
+        <input type="text" id="playerUsername" required>
         <button id="submitUsernameBtn">Start Game</button>
     `;
 
@@ -61,48 +57,44 @@ function showUsernameForm() {
 
     const submitUsernameBtn = document.getElementById('submitUsernameBtn');
     submitUsernameBtn.addEventListener('click', async () => {
-        const name = document.getElementById('playerName').value.trim();
+        const usernameInput = document.getElementById('playerUsername').value.trim();
 
-        if (name) {
-            console.log('Submitting username:', name); 
-            try {
-                const response = await fetch(`${backendURL}/users`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: name }),
-                });
-
-                if (!response.ok) {
-                    console.error('Error submitting username:', response.statusText);
-                    alert('Failed to create user. Please try again.');
-                    return;
-                }
-
-                const data = await response.json();
-                console.log('Backend response:', data); 
-
-                username = data.username;
-                userId = data.userId;
-                
-                // Save to localStorage
-                localStorage.setItem('userData', JSON.stringify({ username, userId }));
-
-                usernameForm.remove(); 
-                initGame();  // Initialize the game after username submission
-            } catch (error) {
-                console.error('Error creating user:', error.message);
-                alert('Error creating user. Please try again.');
-            }
-        } else {
+        if (!usernameInput) {
             alert('Please enter a username.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${backendURL}/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: usernameInput }),
+            });
+
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                alert(errorData.error || 'Failed to create user. Please try again.');
+                return;
+            }
+
+            const data = await response.json();
+            username = data.username;
+            userId = data.userId;
+
+            // Save to localStorage
+            localStorage.setItem('userData', JSON.stringify({ username, userId }));
+
+            usernameForm.remove();
+            initGame(); // Initialize the game after username submission
+        } catch (error) {
+            alert('Error creating user. Please try again.');
         }
     });
 }
 
 // Initialize the game
 function initGame() {
-    console.log('Initializing game for user:', { username, userId }); 
-
     paddleX = (canvas.width - paddleWidth) / 2;
     ballX = canvas.width / 2;
     ballY = canvas.height - 30;
@@ -169,21 +161,13 @@ function moveBall() {
 
 // Handle game over
 function gameOver() {
-    console.log('Game over. Final score:', score); 
     isGameRunning = false;
     finalScoreElement.textContent = score;
 
     popupMessage.classList.remove('hidden');
     submitScoreBtn.onclick = async () => {
-        const playerEmail = playerEmailInput.value.trim();
-
-        if (!playerEmail) {
-            alert("Email is required to save your score.");
-            return;
-        }
-
         try {
-            await saveScore(username, playerEmail, gameId, score);
+            await saveScore(username, gameId, score);
 
             if (score > highScore) {
                 highScore = score;
@@ -197,19 +181,18 @@ function gameOver() {
             gameOverMessage.classList.add('show');
             restartBtn.style.display = "block";
         } catch (error) {
-            console.error('Error saving score:', error);
             alert(`Failed to save score: ${error.message}`);
         }
     };
 }
 
 // Save score to backend
-async function saveScore(name, email, gameId, score) {
+async function saveScore(username, gameId, score) {
     try {
         const response = await fetch(`${backendURL}/scores`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, gameId, score }),
+            body: JSON.stringify({ username, gameId, score }),
         });
 
         if (!response.ok) {
