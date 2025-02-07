@@ -4,38 +4,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catch The Ball</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <h1>Catch The Ball</h1>
+
+  <!--username display -->
+  <div id="usernameDisplay">
+   
+    <span id="usernameText"></span>
+    <button id="renameBtn" onclick="renameUsername()">✎ Edit</button>
+</div>
+
+
     <canvas id="gameCanvas"></canvas>
 
-    <!-- Form for Username -->
-    <form id="usernameForm" class="hidden">
-        <label for="usernameInput">Enter Username:</label>
-        <input id="usernameInput" type="text" placeholder="Your Username" required>
-        <button type="submit">Start Game</button>
-    </form>
-
-    <!-- Game Over Popup -->
-    <div id="gameOverMessage" class="hidden">
-        <p>GAME OVER!</p>
-        <p>Your final score is: <span id="finalScore"></span></p>
-        <p id="highScoreMessage"></p>
-        <button id="restartBtn">Restart Game</button>
+  <!-- Game Over Modal -->
+<div id="gameOverModal" class="modal hidden">
+    <div class="modal-content">
+        <h2>🎮 Game Over!</h2>
+        <p>Your Score: <span id="finalScore">0</span></p>
+        <p>High Score: <span id="highScoreDisplay">0</span></p>
+        <p id="highScoreMessage"></p> 
+        <div class="buttons">
+            <button onclick="restartGame()">🔄 Restart Game</button>
+            <button onclick="viewLeaderboard()">🏆 View Leaderboard</button>
+        </div>
     </div>
+</div>
 
-    <!-- Score Submission Popup -->
-    <div id="submitScorePopup" class="popup hidden">
+<!-- Leaderboard Modal -->
+<div id="leaderboardModal" class="modal hidden">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeLeaderboardModal()">&times;</span>
+        <h2>🏅 Leaderboard</h2>
+        <div class="leaderboard-container">
+            <div class="leaderboard-header">
+                <span>Rank</span>
+                <span>Username</span>
+                <span>Score</span>
+            </div>
+            <ul id="leaderboardList"></ul>
+        </div>
+    </div>
+</div>
+    <footer>
+        <span id="copyrightIcon" style="cursor: pointer;">&#169;</span>
+    </footer>
+
+    <div id="popupMessage" class="popup hidden">
         <div class="popup-content">
-            <h2>Submit Your Score</h2>
-            <input id="playerName" type="text" placeholder="Enter your name" required>
-            <input id="playerEmail" type="email" placeholder="Enter your email" required>
-            <button id="submitScoreBtn">Submit Score</button>
+            <span id="closePopup" class="close">&times;</span>
+            <div class="modal-body">
+                <span style="display: block; margin: 10px 0 0 0"><b><span style="color: #4e4e4e">Disclaimer:</span></b></span>
+                This game is for entertainment purposes only and provided as-is without warranties. The developer is not responsible for any damages or issues. No personal data is collected—only local high scores are stored.
+                <br />
+                <span style="display: block; margin: 10px 0 0 0; color: #4e4e4e"><b>Credits:</b></span>
+                Designed & Powered By <a href="https://www.scieverinc.com/" style="text-decoration: none" target="_blank"><b><span style="color: #4e4e4e">Sciever Inc.</span></b></a><br />
+                Developed By <a href="https://www.instagram.com/rajunpandey/?hl=en" style="text-decoration: none" target="_blank"><span style="color: #4e4e4e; font-weight: 500">Rajun Pandey</span></a>
+            </div>
         </div>
     </div>
 
-    <!-- Game Script -->
     <script src="script.js"></script>
 </body>
 </html>
