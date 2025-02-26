@@ -1,10 +1,17 @@
+
+// DOM Element References
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const gameOverModal = document.getElementById('gameOverModal');
 const finalScoreElement = document.getElementById('finalScore');
 const highScoreDisplay = document.getElementById('highScoreDisplay');
 const leaderboardList = document.getElementById('leaderboardList');
-const highScoreMessage = document.getElementById('highScoreMessage');
+const personalScoresList = document.getElementById('personalScoresList');
+const currentGameName = document.getElementById('currentGameName');
+const personalGameName = document.getElementById('personalGameName');
+const welcomeMessage = document.getElementById('welcomeMessage');
+const leaderboardSearch = document.getElementById('leaderboardSearch');
+
 // UI Elements
 const copyrightIcon = document.getElementById('copyrightIcon');
 const popupMessage = document.getElementById('popupMessage');
@@ -18,12 +25,16 @@ let paddleX;
 let ballRadius = 10;
 let ballX;
 let ballY;
-let ballDx;
-let ballDy;
-let score;
+let ballDx = 2;
+let ballDy = 2;
+let score = 0;
 let speedIncreaseFactor = 1.1;
 let isDragging = false;
 let highScore = localStorage.getItem('highScore') || 0;
+let currentLeaderboardGame = 'catch-the-ball';
+let currentView = 'global';
+let currentSearchQuery = '';
+let personalScoresCache = [];
 
 // Initialize Canvas
 canvas.width = canvas.offsetWidth;
@@ -40,19 +51,46 @@ function initializeUsername() {
         localStorage.setItem('username', username);
     }
     displayUsername();
+    highScoreDisplay.textContent = highScore;
 }
 
 function renameUsername() {
-    const newUsername = prompt('Enter new username:', username);
-    if (newUsername !== null && newUsername.trim() !== '') {
-        username = newUsername.trim();
+    const modal = document.getElementById('usernameEditModal');
+    const input = document.getElementById('newUsernameInput');
+    input.value = username;
+    modal.classList.remove('hidden');
+    input.focus();
+}
+
+function saveNewUsername() {
+    const input = document.getElementById('newUsernameInput');
+    const newUsername = input.value.trim();
+    
+    if (newUsername && newUsername !== username) {
+        username = newUsername;
         localStorage.setItem('username', username);
         displayUsername();
+        
         if (!document.getElementById('leaderboardModal').classList.contains('hidden')) {
             fetchLeaderboard();
         }
     }
+    closeUsernameEditModal();
 }
+
+function closeUsernameEditModal() {
+    document.getElementById('usernameEditModal').classList.add('hidden');
+}
+
+document.getElementById('newUsernameInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') saveNewUsername();
+});
+
+document.getElementById('usernameEditModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('usernameEditModal')) {
+        closeUsernameEditModal();
+    }
+});
 
 function displayUsername() {
     document.getElementById('usernameText').textContent = username;
@@ -75,11 +113,14 @@ function initGame() {
 
 function gameOver() {
     finalScoreElement.textContent = score;
-    highScoreDisplay.textContent = highScore;
-
+    
     if (score > highScore) {
         highScore = score;
         localStorage.setItem('highScore', highScore);
+        highScoreDisplay.textContent = highScore;
+        highScoreMessage.textContent = "🎉 New High Score! 🎉";
+    } else {
+        highScoreMessage.textContent = `Current High Score: ${highScore}`;
     }
 
     saveScore();
@@ -152,61 +193,161 @@ function saveScore() {
     fetch('http://localhost:8000/scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, score })
-    })
-    .then(response => response.json())
-    .then(fetchLeaderboard)
-    .catch(console.error);
+        body: JSON.stringify({
+            username,
+            score,
+            game: 'catch-the-ball'
+        })
+    }).then(fetchLeaderboard);
 }
 
-// Update fetchLeaderboard function
-function fetchLeaderboard() {
-    leaderboardList.innerHTML = '<li>Loading...</li>';
+function updateLeaderboard() {
+    currentLeaderboardGame = document.getElementById('gameSelector').value;
+    if (currentView === 'global') {
+        fetchLeaderboard();
+    } else {
+        fetchPersonalScores();
+    }
+}
+
+function handleLeaderboardSearch(e) {
+    currentSearchQuery = e.target.value.trim().toLowerCase();
+    showWelcomeIfCurrentUser();
     
-    fetch('http://localhost:8000/leaderboard')
-        .then(response => {
-            if (!response.ok) throw new Error('Server error');
-            return response.json();
-        })
+    if (currentView === 'global') {
+        fetchLeaderboard();
+    } else {
+        filterPersonalScores();
+    }
+}
+
+function showWelcomeIfCurrentUser() {
+    if (currentSearchQuery === username.toLowerCase()) {
+        welcomeMessage.classList.remove('hidden');
+        welcomeMessage.innerHTML = `🎮 Welcome ${username}! Here are your results:`;
+    } else {
+        welcomeMessage.classList.add('hidden');
+    }
+}
+
+function fetchLeaderboard() {
+    const url = currentSearchQuery 
+        ? `http://localhost:8000/search?game=${currentLeaderboardGame}&username=${currentSearchQuery}`
+        : `http://localhost:8000/leaderboard?game=${currentLeaderboardGame}`;
+
+    leaderboardList.innerHTML = '<li class="loading">Loading...</li>';
+    
+    fetch(url)
+        .then(response => response.json())
         .then(data => {
-            console.log('Leaderboard data:', data); // Debugging: Log the data
-            leaderboardList.innerHTML = '';
-
-            // Handle empty leaderboard
-            if (data.message) {
-                leaderboardList.innerHTML = `<li>${data.message}</li>`;
-                return;
-            }
-
-            // Display top 10 scores
-            data.forEach((entry, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <span>${index + 1}.</span>
-                    <span>${entry.username}</span>
-                    <span>${entry.score}</span>
-                `;
-                leaderboardList.appendChild(li);
-            });
+            currentGameName.textContent = data.game;
+            leaderboardList.innerHTML = data.scores.map((entry, index) => `
+                <li class="leaderboard-entry">
+                    <span class="rank-badge">${index + 1}.</span>
+                    <span class="username">${entry.username || 'Anonymous'}</span>
+                    <span class="score-value">${entry.score}</span>
+                </li>
+            `).join('');
         })
-        .catch(error => {
-            console.error(error);
-            leaderboardList.innerHTML = '<li>Error loading leaderboard</li>';
+        .catch(() => {
+            leaderboardList.innerHTML = '<li class="error">Failed to load leaderboard</li>';
         });
 }
-// Add close function
+
+function fetchPersonalScores() {
+    fetch(`http://localhost:8000/scores/${username}?game=${currentLeaderboardGame}`)
+        .then(response => response.json())
+        .then(data => {
+            personalScoresCache = data.scores;
+            filterPersonalScores();
+        })
+        .catch(console.error);
+}
+
+// Updated filterPersonalScores function
+function filterPersonalScores() {
+    const filtered = personalScoresCache.filter(score => {
+        const searchTerm = currentSearchQuery.toLowerCase().trim();
+        const scoreUsername = score.username?.toLowerCase().trim() || '';
+        return scoreUsername.includes(searchTerm);
+    });
+    
+    personalScoresList.innerHTML = filtered.map(score => `
+        <li class="personal-entry">
+            <span class="score-date">${new Date(score.date).toLocaleDateString()}</span>
+            <span class="score-game">${score.game}</span>
+            <span class="score-value">${score.score}</span>
+        </li>
+    `).join('');
+
+    // Show message if no results
+    if (filtered.length === 0) {
+        personalScoresList.innerHTML = `
+            <li class="no-results">
+                No scores found for "${currentSearchQuery}"
+            </li>
+        `;
+    }
+}
+
+// Modified toggle function
+function toggleLeaderboardView(viewType) {
+    currentView = viewType;
+    currentSearchQuery = ''; // Reset search on view change
+    leaderboardSearch.value = ''; // Clear input field
+    
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase() === viewType);
+    });
+
+    document.getElementById('globalLeaderboard').classList.toggle('hidden', viewType !== 'global');
+    document.getElementById('personalLeaderboard').classList.toggle('hidden', viewType !== 'personal');
+
+    if (viewType === 'personal') {
+        personalGameName.textContent = document.getElementById('gameSelector').value.replace(/-/g, ' ');
+        fetchPersonalScores();
+    } else {
+        fetchLeaderboard();
+    }
+}
+// Enhanced search handler
+function handleLeaderboardSearch(e) {
+    currentSearchQuery = e.target.value.trim();
+    showWelcomeIfCurrentUser();
+    
+    // Debounce search to prevent rapid API calls
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+        if (currentView === 'global') {
+            fetchLeaderboard();
+        } else {
+            filterPersonalScores();
+        }
+    }, 300);
+}
+
+// Improved game switching
+function updateLeaderboard() {
+    currentLeaderboardGame = document.getElementById('gameSelector').value;
+    currentSearchQuery = '';
+    leaderboardSearch.value = '';
+    
+    if (currentView === 'global') {
+        fetchLeaderboard();
+    } else {
+        personalGameName.textContent = 
+            document.getElementById('gameSelector').value.replace(/-/g, ' ');
+        fetchPersonalScores();
+    }
+}
 function closeLeaderboardModal() {
     document.getElementById('leaderboardModal').classList.add('hidden');
 }
-// Modal Controls
+
 function viewLeaderboard() {
     const modal = document.getElementById('leaderboardModal');
     modal.classList.remove('hidden');
     fetchLeaderboard();
-}
-
-function closeLeaderboardModal() {
-    document.getElementById('leaderboardModal').classList.add('hidden');
 }
 
 function restartGame() {
